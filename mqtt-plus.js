@@ -513,7 +513,7 @@ module.exports = function(RED) {
                 newmsg.qos = node.subscribedqos = 128;
             }
             node.send(newmsg);
-        }
+        };
 
         this.onconnect = this.showandsendstate;
         this.ondisconnect = this.showandsendstate;
@@ -521,15 +521,14 @@ module.exports = function(RED) {
             node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
             var newmsg = {subscribed:false, connected:false, qos: 128};
             node.send(newmsg);
-        }
+        };
         
         this.suberror = function(qos){
             node.subscribedqos = qos;
             node.showandsendstate();
-        }
-
-
+        };
     }
+    
     RED.nodes.registerType("mqtt-plus in",MQTTInNode);
 
     function MQTTOutNode(n) {
@@ -597,14 +596,15 @@ module.exports = function(RED) {
                 var newmsg = {connected:false};
                 node.send(newmsg);
             }
-        }
+        };
+        
         this.ondisconnect = this.onconnect;
         this.onreconnecting = function(){
-            node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
+            node.status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
             var newmsg = {connected:false};
             node.send(newmsg);
-        }
-        
+        };
     }
+    
     RED.nodes.registerType("mqtt-plus out",MQTTOutNode);
 };
