@@ -157,6 +157,12 @@ module.exports = function(RED) {
             if (Object.keys(node.users).length === 1) {
                 node.connect();
             }
+            // if already connected, tell this new node.
+            if (node.connected){
+                if(mqttNode.onconnect){
+                    mqttNode.onconnect();
+                }
+            }
         };
 
         this.deregister = function(mqttNode,done) {
@@ -203,7 +209,8 @@ module.exports = function(RED) {
                             node.log(RED._("mqtt.state.disconnected",{broker:(node.clientid?node.clientid+"@":"")+node.brokerurl}));
                             for (var id in node.users) {
                                 if (node.users.hasOwnProperty(id)) {
-                                    node.users[id].status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
+                                    node.users[id].ondisconnect();
+                                    //node.users[id].status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
                                 }
                             }
                         } else if (node.connecting) {
@@ -243,7 +250,10 @@ module.exports = function(RED) {
                     node.log(RED._("mqtt.state.connected",{broker:(node.clientid?node.clientid+"@":"")+node.brokerurl + " as " + node.options.username}));
                     for (var id in node.users) {
                         if (node.users.hasOwnProperty(id)) {
-                            node.users[id].status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
+                            //node.users[id].status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
+                            if(node.users[id].onconnect){
+                                node.users[id].onconnect();
+                            }
                         }
                     }
                     // Remove any existing listeners before resubscribing to avoid duplicates in the event of a re-connection
@@ -261,7 +271,19 @@ module.exports = function(RED) {
                                 }
                             }
                             var options = {qos: qos};
-                            node.client.subscribe(topic, options);
+                            //node.client.subscribe(topic, options);
+                            node.client.subscribe(topic, options, function(err, granted){
+                                for (var r in node.subscriptions[topic]) {
+                                    if (node.subscriptions[topic].hasOwnProperty(r)) {
+                                        var that = node.subscriptions[topic][r].that;
+                                        if (granted.length){
+                                            if (that.suberror){
+                                                that.suberror(granted[0].qos);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
                         }
                     }
 
@@ -274,7 +296,8 @@ module.exports = function(RED) {
                 node.onreconnect = function() {
                     for (var id in node.users) {
                         if (node.users.hasOwnProperty(id)) {
-                            node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
+                            node.users[id].onreconnecting();
+                            //node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
                         }
                     }
                 };
@@ -287,7 +310,11 @@ module.exports = function(RED) {
                         node.log(RED._("mqtt.state.disconnected",{broker:(node.clientid?node.clientid+"@":"")+node.brokerurl}));
                         for (var id in node.users) {
                             if (node.users.hasOwnProperty(id)) {
-                                node.users[id].status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
+                                node.users[id].ondisconnect();
+                                //node.users[id].status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
+                                //if(node.users[id].onclose){
+                                //    setTimeout(node.users[id].onclose(), 0);
+                                //}
                             }
                         }
                     } else if (node.connecting) {
@@ -308,7 +335,7 @@ module.exports = function(RED) {
             }
         };
 
-        this.subscribe = function (topic,qos,callback,ref) {
+        this.subscribe = function (topic,qos,callback,ref, that) {
             ref = ref||0;
             node.subscriptions[topic] = node.subscriptions[topic]||{};
             var sub = {
@@ -319,14 +346,21 @@ module.exports = function(RED) {
                         callback(mtopic,mpayload, mpacket);
                     }
                 },
-                ref: ref
+                ref: ref,
+                that:that
             };
             node.subscriptions[topic][ref] = sub;
             if (node.connected) {
                 node.client.on('message',sub.handler);
                 var options = {};
                 options.qos = qos;
-                node.client.subscribe(topic, options);
+                node.client.subscribe(topic, options, function(err, granted){
+                    if (granted.length){
+                        if (that.suberror){
+                            that.suberror(granted[0].qos);
+                        }
+                    }
+                });
             }
         };
 
@@ -347,13 +381,14 @@ module.exports = function(RED) {
             }
         };
 
-        this.publish = function (msg) {
+        this.publish = function (msg, that) {
             if (node.connected) {
-                if (!Buffer.isBuffer(msg.payload)) {
-                    if (typeof msg.payload === "object") {
-                        msg.payload = JSON.stringify(msg.payload);
-                    } else if (typeof msg.payload !== "string") {
-                        msg.payload = "" + msg.payload;
+                var payload = msg.payload;
+                if (!Buffer.isBuffer(payload)) {
+                    if (typeof payload === "object") {
+                        payload = JSON.stringify(payload);
+                    } else if (typeof payload !== "string") {
+                        payload = "" + payload;
                     }
                 }
 
@@ -361,7 +396,13 @@ module.exports = function(RED) {
                     qos: msg.qos || 0,
                     retain: msg.retain || false
                 };
-                node.client.publish(msg.topic, msg.payload, options, function(err) {return});
+                node.client.publish(msg.topic, payload, options, function(err) {
+                    if (err){
+                        msg.err = err;
+                    }
+                    that.send(msg);
+                    return;
+                });
             }
         };
 
@@ -382,7 +423,7 @@ module.exports = function(RED) {
 
     }
 
-    RED.nodes.registerType("mqtt-broker",MQTTBrokerNode,{
+    RED.nodes.registerType("mqtt-plus-broker",MQTTBrokerNode,{
         credentials: {
             user: {type:"text"},
             password: {type: "password"}
@@ -401,8 +442,34 @@ module.exports = function(RED) {
         if (!/^(#$|(\+|[^+#]*)(\/(\+|[^+#]*))*(\/(\+|#|[^+#]*))?$)/.test(this.topic)) {
             return this.warn(RED._("mqtt.errors.invalid-topic"));
         }
+        this.subscribedqos = 128;
+        
         var node = this;
+        
         if (this.brokerConn) {
+            this.on("input",function(msg) {
+                if (((msg.cmd === 'subscribe') && (msg.topic)) || (msg.cmd === 'resubscribe')){
+                    node.brokerConn.unsubscribe(node.topic,node.id);
+                    if (msg.cmd === 'subscribe'){
+                        node.topic = msg.topic;
+                    }
+                    node.brokerConn.subscribe(node.topic,node.qos,function(topic,payload,packet) {
+                        if (isUtf8(payload)) { payload = payload.toString(); }
+                        var msg = {topic:topic,payload:payload, qos: packet.qos, retain: packet.retain};
+                        if ((node.brokerConn.broker === "localhost")||(node.brokerConn.broker === "127.0.0.1")) {
+                            msg._topic = topic;
+                        }
+                        node.send(msg);
+                    }, node.id, node);
+                    return;
+                }
+                
+                if (msg.cmd === 'getconnected'){
+                    this.onconnect();
+                    return;
+                }
+            });
+            
             this.status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
             if (this.topic) {
                 node.brokerConn.register(this);
@@ -413,9 +480,9 @@ module.exports = function(RED) {
                         msg._topic = topic;
                     }
                     node.send(msg);
-                }, this.id);
+                }, this.id, this);
                 if (this.brokerConn.connected) {
-                    node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
+                    //node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
                 }
             }
             else {
@@ -430,8 +497,40 @@ module.exports = function(RED) {
         } else {
             this.error(RED._("mqtt.errors.missing-config"));
         }
+        
+        this.showandsendstate = function(){
+            var con = this.brokerConn.connected;
+            var newmsg = {subscribed:(node.subscribedqos < 3), connected: con, qos:node.subscribedqos};
+            
+            if (con){
+                if (node.subscribedqos < 3){
+                    node.status({fill:"green",shape:"dot",text:"subscribed at QOS "+node.subscribedqos});
+                } else {
+                    node.status({fill:"red",shape:"dot",text:"subscribe failed (QOS "+node.subscribedqos+")"});
+                }
+            } else {
+                node.status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
+                newmsg.qos = node.subscribedqos = 128;
+            }
+            node.send(newmsg);
+        }
+
+        this.onconnect = this.showandsendstate;
+        this.ondisconnect = this.showandsendstate;
+        this.onreconnecting = function(){
+            node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
+            var newmsg = {subscribed:false, connected:false, qos: 128};
+            node.send(newmsg);
+        }
+        
+        this.suberror = function(qos){
+            node.subscribedqos = qos;
+            node.showandsendstate();
+        }
+
+
     }
-    RED.nodes.registerType("mqtt in",MQTTInNode);
+    RED.nodes.registerType("mqtt-plus in",MQTTInNode);
 
     function MQTTOutNode(n) {
         RED.nodes.createNode(this,n);
@@ -452,6 +551,11 @@ module.exports = function(RED) {
                     return;
                 }
                 
+                if (msg.cmd === 'getconnected'){
+                    this.onconnect();
+                    return;
+                }
+                
                 if (msg.qos) {
                     msg.qos = parseInt(msg.qos);
                     if ((msg.qos !== 0) && (msg.qos !== 1) && (msg.qos !== 2)) {
@@ -466,13 +570,14 @@ module.exports = function(RED) {
                 }
                 if ( msg.hasOwnProperty("payload")) {
                     if (msg.hasOwnProperty("topic") && (typeof msg.topic === "string") && (msg.topic !== "")) { // topic must exist
-                        this.brokerConn.publish(msg);  // send the message
+                        this.brokerConn.publish(msg, this);  // send the message
                     }
                     else { node.warn(RED._("mqtt.errors.invalid-topic")); }
                 }
             });
             if (this.brokerConn.connected) {
-                node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
+                this.onconnect();
+                //node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
             }
             node.brokerConn.register(node);
             this.on('close', function(done) {
@@ -481,6 +586,25 @@ module.exports = function(RED) {
         } else {
             this.error(RED._("mqtt.errors.missing-config"));
         }
+
+        this.onconnect = function () {
+            if (this.brokerConn.connected) {
+                node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
+                var newmsg = {connected:true};
+                node.send(newmsg);
+            } else {
+                node.status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
+                var newmsg = {connected:false};
+                node.send(newmsg);
+            }
+        }
+        this.ondisconnect = this.onconnect;
+        this.onreconnecting = function(){
+            node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
+            var newmsg = {connected:false};
+            node.send(newmsg);
+        }
+        
     }
-    RED.nodes.registerType("mqtt out",MQTTOutNode);
+    RED.nodes.registerType("mqtt-plus out",MQTTOutNode);
 };

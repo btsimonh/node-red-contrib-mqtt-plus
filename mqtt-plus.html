@@ -11,7 +11,7 @@
   limitations under the License.
 -->
 
-<script type="text/x-red" data-template-name="mqtt in">
+<script type="text/x-red" data-template-name="mqtt-plus in">
     <div class="form-row">
         <label for="node-input-broker"><i class="fa fa-globe"></i> <span data-i18n="mqtt.label.broker"></span></label>
         <input type="text" id="node-input-broker">
@@ -34,41 +34,41 @@
     </div>
 </script>
 
-<script type="text/x-red" data-help-name="mqtt in">
-<p>Connects to a MQTT broker and subscribes to messages from the specified topic.</p>
+<script type="text/x-red" data-help-name="mqtt-plus in">
+<p>Connects to a mqtt-plus broker and subscribes to messages from the specified topic.</p>
     <h3>Outputs</h3>
     <dl class="message-properties">
        <dt>payload <span class="property-type">string | buffer</span></dt>
        <dd>a string unless detected as a binary buffer.</dd>
        <dt>topic <span class="property-type">string</span></dt>
-       <dd>the MQTT topic, uses / as a heirarchy separator.</dd>
+       <dd>the mqtt topic, uses / as a heirarchy separator.</dd>
        <dt>qos <span class="property-type">number</span> </dt>
        <dd>0, fire and forget - 1, at least once - 2, once and once only.</dd>
        <dt>retain <span class="property-type">boolean</span></dt>
        <dd>true indicates the message was retained and may be old.</dd>
     </dl>
     <h3>Details</h3>
-    The subscription topic can include MQTT wildcards, + for one level, # for multiple levels.</p>
-    <p>This node requires a connection to a MQTT broker to be configured. This is configured by clicking
+    The subscription topic can include mqtt wildcards, + for one level, # for multiple levels.</p>
+    <p>This node requires a connection to a mqtt broker to be configured. This is configured by clicking
     the pencil icon.</p>
-    <p>Several MQTT nodes (in or out) can share the same broker connection if required.</p>
+    <p>Several mqtt nodes (in or out) can share the same broker connection if required.</p>
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType('mqtt in',{
+    RED.nodes.registerType('mqtt-plus in',{
         category: 'input',
         defaults: {
             name: {value:""},
             topic: {value:"",required:true,validate: RED.validators.regex(/^(#$|(\+|[^+#]*)(\/(\+|[^+#]*))*(\/(\+|#|[^+#]*))?$)/)},
             qos: {value: "2"},
-            broker: {type:"mqtt-broker", required:true}
+            broker: {type:"mqtt-plus-broker", required:true}
         },
-        color:"#d8bfd8",
-        inputs:0,
+        color:"#d800d8",
+        inputs:1,
         outputs:1,
         icon: "bridge.png",
         label: function() {
-            return this.name||this.topic||"mqtt";
+            return this.name||this.topic||"mqtt-plus-in";
         },
         labelStyle: function() {
             return this.name?"node_label_italic":"";
@@ -81,7 +81,7 @@
     });
 </script>
 
-<script type="text/x-red" data-template-name="mqtt out">
+<script type="text/x-red" data-template-name="mqtt-plus out">
     <div class="form-row">
         <label for="node-input-broker"><i class="fa fa-globe"></i> <span data-i18n="mqtt.label.broker"></span></label>
         <input type="text" id="node-input-broker">
@@ -111,15 +111,15 @@
     <div class="form-tips"><span data-i18n="mqtt.tip"></span></div>
 </script>
 
-<script type="text/x-red" data-help-name="mqtt out">
-    <p>Connects to a MQTT broker and publishes messages.</p>
+<script type="text/x-red" data-help-name="mqtt-plus out">
+    <p>Connects to a mqtt-plus broker and publishes messages.</p>
     <h3>Inputs</h3>
     <dl class="message-properties">
        <dt>payload <span class="property-type">string | buffer</span></dt>
        <dd> most users prefer simple text payloads, but binary buffers can also be published.</dd>
 
        <dt class="optional">topic <span class="property-type">string</span></dt>
-       <dd> the MQTT topic to publish to.</dd>
+       <dd> the mqtt topic to publish to.</dd>
 
        <dt class="optional">qos <span class="property-type">number</span></dt>
        <dd>0, fire and forget - 1, at least once - 2, once and once only. Default 0.</dd>
@@ -135,28 +135,28 @@
     <p>Likewise the QoS and retain values can be configured in the node or, if left
     blank, set by <code>msg.qos</code> and <code>msg.retain</code> respectively. To clear a previously
     retained topic from the broker, send a blank message to that topic with the retain flag set.</p>
-    <p>This node requires a connection to a MQTT broker to be configured. This is configured by clicking
+    <p>This node requires a connection to a mqtt broker to be configured. This is configured by clicking
     the pencil icon.</p>
-    <p>Several MQTT nodes (in or out) can share the same broker connection if required.</p>
+    <p>Several mqtt nodes (in or out) can share the same broker connection if required.</p>
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType('mqtt out',{
+    RED.nodes.registerType('mqtt-plus out',{
         category: 'output',
         defaults: {
             name: {value:""},
             topic: {value:""},
             qos: {value:""},
             retain: {value:""},
-            broker: {type:"mqtt-broker", required:true}
+            broker: {type:"mqtt-plus-broker", required:true}
         },
-        color:"#d8bfd8",
+        color:"#d800d8",
         inputs:1,
-        outputs:0,
+        outputs:1,
         icon: "bridge.png",
         align: "right",
         label: function() {
-            return this.name||this.topic||"mqtt";
+            return this.name||this.topic||"mqtt-plus-out";
         },
         labelStyle: function() {
             return this.name?"node_label_italic":"";
@@ -164,16 +164,16 @@
     });
 </script>
 
-<script type="text/x-red" data-template-name="mqtt-broker">
+<script type="text/x-red" data-template-name="mqtt-plus-broker">
     <div class="form-row">
         <label for="node-config-input-name"><i class="fa fa-tag"></i> <span data-i18n="common.label.name"></span></label>
         <input type="text" id="node-config-input-name" data-i18n="[placeholder]common.label.name">
     </div>
     <div class="form-row">
-        <ul style="background: #fff; min-width: 600px; margin-bottom: 20px;" id="node-config-mqtt-broker-tabs"></ul>
+        <ul style="background: #fff; min-width: 600px; margin-bottom: 20px;" id="node-config-mqtt-plus-broker-tabs"></ul>
     </div>
-    <div id="node-config-mqtt-broker-tabs-content" style="min-height: 170px;">
-        <div id="mqtt-broker-tab-connection" style="display:none">
+    <div id="node-config-mqtt-plus-broker-tabs-content" style="min-height: 170px;">
+        <div id="mqtt-plus-broker-tab-connection" style="display:none">
             <div class="form-row node-input-broker">
                 <label for="node-config-input-broker"><i class="fa fa-globe"></i> <span data-i18n="mqtt.label.broker"></span></label>
                 <input class="input-append-left" type="text" id="node-config-input-broker" style="width:40%;" data-i18n="[placeholder]mqtt.label.example">
@@ -202,7 +202,7 @@
                 <label for="node-config-input-compatmode" style="width: auto;" data-i18n="mqtt.label.compatmode"></label>
             </div>
         </div>
-        <div id="mqtt-broker-tab-security" style="display:none">
+        <div id="mqtt-plus-broker-tab-security" style="display:none">
             <div class="form-row">
                 <label for="node-config-input-user"><i class="fa fa-user"></i> <span data-i18n="common.label.username"></span></label>
                 <input type="text" id="node-config-input-user">
@@ -212,7 +212,7 @@
                 <input type="password" id="node-config-input-password">
             </div>
         </div>
-        <div id="mqtt-broker-tab-birth" style="display:none">
+        <div id="mqtt-plus-broker-tab-birth" style="display:none">
             <div class="form-row">
                 <label for="node-config-input-birthTopic"><i class="fa fa-tasks"></i> <span data-i18n="common.label.topic"></span></label>
                 <input type="text" id="node-config-input-birthTopic" data-i18n="[placeholder]mqtt.placeholder.birth-topic">
@@ -234,7 +234,7 @@
                 <input type="text" id="node-config-input-birthPayload" data-i18n="[placeholder]common.label.payload">
             </div>
         </div>
-        <div id="mqtt-broker-tab-will" style="display:none">
+        <div id="mqtt-plus-broker-tab-will" style="display:none">
             <div class="form-row">
                 <label for="node-config-input-willTopic"><i class="fa fa-tasks"></i> <span data-i18n="common.label.topic"></span></label>
                 <input type="text" id="node-config-input-willTopic" data-i18n="[placeholder]mqtt.placeholder.will-topic">
@@ -259,16 +259,16 @@
     </div>
 </script>
 
-<script type="text/x-red" data-help-name="mqtt-broker">
-    <p>A minimum MQTT broker connection requires only a broker server address to be added to the default configuration.</p>
-    <p>If the <b>Server</b> option is set to a full url (e.g. ws://example.com:8083/mqtt), then the <b>Port</b> setting will be disabled and ignored.  See <a href='https://github.com/mqttjs/MQTT.js' target="_blank">mqttjs</a> for applicable urls.</p>
+<script type="text/x-red" data-help-name="mqtt-plus-broker">
+    <p>A minimum mqtt-plus broker connection requires only a broker server address to be added to the default configuration.</p>
+    <p>If the <b>Server</b> option is set to a full url (e.g. ws://example.com:8083/mqtt), then the <b>Port</b> setting will be disabled and ignored.  See <a href='https://github.com/mqttjs/mqtt.js' target="_blank">mqttjs</a> for applicable urls.</p>
     <p>To secure the connection with SSL/TLS, a TLS Configuration must also be configured and selected. (not applicable to wss://)</p>
     <p>If you create a Client ID it must be unique to the broker you are connecting to.</p>
-    <p>For more information about MQTT see the <a href="http://www.eclipse.org/paho/" target="_blank">Eclipse Paho</a> site.</p>
+    <p>For more information about mqtt see the <a href="http://www.eclipse.org/paho/" target="_blank">Eclipse Paho</a> site.</p>
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType('mqtt-broker',{
+    RED.nodes.registerType('mqtt-plus-broker',{
         category: 'config',
         defaults: {
             name: {value:""},
@@ -317,26 +317,26 @@
         },
         oneditprepare: function () {
             var tabs = RED.tabs.create({
-                id: "node-config-mqtt-broker-tabs",
+                id: "node-config-mqtt-plus-broker-tabs",
                 onchange: function(tab) {
-                    $("#node-config-mqtt-broker-tabs-content").children().hide();
+                    $("#node-config-mqtt-plus-broker-tabs-content").children().hide();
                     $("#" + tab.id).show();
                 }
             });
             tabs.addTab({
-                id: "mqtt-broker-tab-connection",
+                id: "mqtt-plus-broker-tab-connection",
                 label: this._("mqtt.tabs-label.connection")
             });
             tabs.addTab({
-                id: "mqtt-broker-tab-security",
+                id: "mqtt-plus-broker-tab-security",
                 label: this._("mqtt.tabs-label.security")
             });
             tabs.addTab({
-                id: "mqtt-broker-tab-birth",
+                id: "mqtt-plus-broker-tab-birth",
                 label: this._("mqtt.tabs-label.birth")
             });
             tabs.addTab({
-                id: "mqtt-broker-tab-will",
+                id: "mqtt-plus-broker-tab-will",
                 label: this._("mqtt.tabs-label.will")
             });
             setTimeout(function() { tabs.resize(); },0);
