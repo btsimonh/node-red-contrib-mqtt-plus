@@ -518,7 +518,7 @@ module.exports = function(RED) {
         this.onconnect = this.showandsendstate;
         this.ondisconnect = this.showandsendstate;
         this.onreconnecting = function(){
-            node.users[id].status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
+            node.status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
             var newmsg = {subscribed:false, connected:false, qos: 128};
             node.send(newmsg);
         };
