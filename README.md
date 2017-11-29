@@ -48,6 +48,8 @@ This has the same basic behavious as the original mqtt-broker node, just with op
 
 
 ## Change Log
+### 0.0.4
+* fixes a crash when a subscribe fails due to invalid topic name/structure
 ### 0.0.3
 * tweaks to output messages, introduction of 2nd out on mqtt-plus in, and updates to html descriptions
 ### 0.0.2

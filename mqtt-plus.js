@@ -276,10 +276,15 @@ module.exports = function(RED) {
                                 for (var r in node.subscriptions[topic]) {
                                     if (node.subscriptions[topic].hasOwnProperty(r)) {
                                         var that = node.subscriptions[topic][r].that;
-                                        if (granted.length){
-                                            if (that.suberror){
-                                                that.suberror(granted[0].qos);
+                                        if (granted){
+                                            if (granted.length){
+                                                if (that.suberror){
+                                                    that.suberror(granted[0].qos);
+                                                }
                                             }
+                                        } else {
+                                            console.log("subscribe error "+util.inspect(err));
+                                            that.suberror(129);
                                         }
                                     }
                                 }
@@ -355,10 +360,15 @@ module.exports = function(RED) {
                 var options = {};
                 options.qos = qos;
                 node.client.subscribe(topic, options, function(err, granted){
-                    if (granted.length){
-                        if (that.suberror){
-                            that.suberror(granted[0].qos);
+                    if (granted){
+                        if (granted.length){
+                            if (that.suberror){
+                                that.suberror(granted[0].qos);
+                            }
                         }
+                    } else {
+                        console.log("subscribe error "+util.inspect(err));
+                        that.suberror(129);
                     }
                 });
             }
