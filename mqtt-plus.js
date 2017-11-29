@@ -449,7 +449,12 @@ module.exports = function(RED) {
         if (this.brokerConn) {
             this.on("input",function(msg) {
                 if (((msg.cmd === 'subscribe') && (msg.topic)) || (msg.cmd === 'resubscribe')){
-                    node.brokerConn.unsubscribe(node.topic,node.id);
+                    if (msg.cmd === 'subscribe'){
+                        // don't resubscribe to the same topic if we don't need to
+                        if (node.topic == msg.topic)
+                            return;
+                    }
+                    node.brokerConn.unsubscribe(node.topic, node.id);
                     if (msg.cmd === 'subscribe'){
                         node.topic = msg.topic;
                     }
@@ -500,7 +505,12 @@ module.exports = function(RED) {
         
         this.showandsendstate = function(){
             var con = this.brokerConn.connected;
-            var newmsg = {subscribed:(node.subscribedqos < 3), connected: con, qos:node.subscribedqos};
+            var newmsg = {
+                subscribed:(node.subscribedqos < 3), 
+                connected: con, 
+                qos:node.subscribedqos,
+                topic: node.topic
+            };
             
             if (con){
                 if (node.subscribedqos < 3){
@@ -512,15 +522,21 @@ module.exports = function(RED) {
                 node.status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
                 newmsg.qos = node.subscribedqos = 128;
             }
-            node.send(newmsg);
+            node.send([null, newmsg]);
         };
 
         this.onconnect = this.showandsendstate;
         this.ondisconnect = this.showandsendstate;
         this.onreconnecting = function(){
             node.status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
-            var newmsg = {subscribed:false, connected:false, qos: 128};
-            node.send(newmsg);
+            var newmsg = {
+                subscribed:false, 
+                connected:false, 
+                reconnecting:true, 
+                qos: 128, 
+                topic: node.topic
+            };
+            node.send([null, newmsg]);
         };
         
         this.suberror = function(qos){
@@ -589,11 +605,17 @@ module.exports = function(RED) {
         this.onconnect = function () {
             if (this.brokerConn.connected) {
                 node.status({fill:"green",shape:"dot",text:"node-red:common.status.connected"});
-                var newmsg = {connected:true};
+                var newmsg = {
+                    connected:true,
+                    topic: node.topic
+                };
                 node.send(newmsg);
             } else {
                 node.status({fill:"red",shape:"ring",text:"node-red:common.status.disconnected"});
-                var newmsg = {connected:false};
+                var newmsg = {
+                    connected:false,
+                    topic: node.topic
+                };
                 node.send(newmsg);
             }
         };
@@ -601,7 +623,11 @@ module.exports = function(RED) {
         this.ondisconnect = this.onconnect;
         this.onreconnecting = function(){
             node.status({fill:"yellow",shape:"ring",text:"node-red:common.status.connecting"});
-            var newmsg = {connected:false};
+            var newmsg = {
+                connected:false,
+                reconnecting: true,
+                topic: node.topic
+            };
             node.send(newmsg);
         };
     }

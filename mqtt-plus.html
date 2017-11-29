@@ -36,7 +36,16 @@
 
 <script type="text/x-red" data-help-name="mqtt-plus in">
 <p>Connects to a mqtt-plus broker and subscribes to messages from the specified topic.</p>
-    <h3>Outputs</h3>
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+       <dt>cmd <span class="property-type">string</span></dt>
+       <dd>set to 'getconnected' to cause the connection state to be output on the second output.</dd>
+       <dd>set to 'subscribe' to subscribe to a new topic.</dd>
+       <dd>set to 'resubscribe' to re-subscribe to the last topic.</dd>
+       <dt class="optional">topic <span class="property-type">string</span></dt>
+       <dd>set to the new topic to subscribe to when using cmd = 'subscribe'.</dd>
+    </dl>
+    <h3>Output 1</h3>
     <dl class="message-properties">
        <dt>payload <span class="property-type">string | buffer</span></dt>
        <dd>a string unless detected as a binary buffer.</dd>
@@ -47,11 +56,30 @@
        <dt>retain <span class="property-type">boolean</span></dt>
        <dd>true indicates the message was retained and may be old.</dd>
     </dl>
+    <h3>Output 2 - connection status</h3>
+    <dl class="message-properties">
+       <dt>topic <span class="property-type">string</span></dt>
+       <dd> the mqtt topic currently subscribed to </dd>
+
+       <dt>connected <span class="property-type">boolean</span></dt>
+       <dd> indicates broker connection state.</dd>
+
+       <dt class="optional">reconnecting <span class="property-type">boolean</span></dt>
+       <dd> either absent or true.  Indicates that the broker is reconnecting.  connected will be false</dd>
+
+       <dt>subscribed <span class="property-type">boolean</span></dt>
+       <dd> indicates that subscription was successful.</dd>
+
+       <dt>qos <span class="property-type">integer</span></dt>
+       <dd> will be 0|1|2|128, where 128 indicates error (if 128, subscribed will be false).</dd>
+       
+    </dl>
     <h3>Details</h3>
     The subscription topic can include mqtt wildcards, + for one level, # for multiple levels.</p>
     <p>This node requires a connection to a mqtt broker to be configured. This is configured by clicking
     the pencil icon.</p>
-    <p>Several mqtt nodes (in or out) can share the same broker connection if required.</p>
+    <p>Several mqtt-plus nodes (in or out) can share the same mqtt-plus broker connection if required.</p>
+    <p>The second output indicates connection state. Messages will only be sent when a connection is established or broken, if a msg is send in with <code>msg.cmd = 'getconnected';</code>, and upon subscription (successful or not)</p>
 </script>
 
 <script type="text/javascript">
@@ -65,7 +93,7 @@
         },
         color:"#d800d8",
         inputs:1,
-        outputs:1,
+        outputs:2,
         icon: "bridge.png",
         label: function() {
             return this.name||this.topic||"mqtt-plus-in";
@@ -126,6 +154,20 @@
 
        <dt class="optional">retain <span class="property-type">boolean</span></dt>
        <dd>set to true to retain the message on the broker. Default false.</dd>
+       
+       <dt class="optional">cmd <span class="property-type">string</span></dt>
+       <dd>set to 'getconnected' to cause the connection state to be output on the second output.</dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+       <dt>topic <span class="property-type">string</span></dt>
+       <dd> the mqtt topic configured </dd>
+
+       <dt>connected <span class="property-type">boolean</span></dt>
+       <dd> indicates broker connection state.</dd>
+
+       <dt class="optional">reconnecting <span class="property-type">boolean</span></dt>
+       <dd> either absent or true.  Indicates that the broker is reconnecting.  connected will be false</dd>
     </dl>
     <h3>Details</h3>
     <code>msg.payload</code> is used as the payload of the published message.
@@ -137,7 +179,8 @@
     retained topic from the broker, send a blank message to that topic with the retain flag set.</p>
     <p>This node requires a connection to a mqtt broker to be configured. This is configured by clicking
     the pencil icon.</p>
-    <p>Several mqtt nodes (in or out) can share the same broker connection if required.</p>
+    <p>Several mqtt-plus nodes (in or out) can share the same mqtt-plus broker connection if required.</p>
+    <p>An output message will only be sent when a connection is established or broken, or if a msg is send in with <code>msg.cmd = 'getconnected';</code></p>
 </script>
 
 <script type="text/javascript">
