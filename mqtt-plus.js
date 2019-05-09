@@ -19,7 +19,9 @@ module.exports = function(RED) {
     var mqtt = require("mqtt");
     var util = require("util");
     var isUtf8 = require('is-utf8');
-
+    var HttpsProxyAgent = require('https-proxy-agent');
+    var url = require('url');
+    
     function matchTopic(ts,t) {
         if (ts == "#") {
             return true;
@@ -84,11 +86,38 @@ module.exports = function(RED) {
             this.cleansession = true;
         }
 
+        var prox, noprox;
+        if (process.env.http_proxy != null) { prox = process.env.http_proxy; }
+        if (process.env.HTTP_PROXY != null) { prox = process.env.HTTP_PROXY; }
+        if (process.env.no_proxy != null) { noprox = process.env.no_proxy.split(","); }
+        if (process.env.NO_PROXY != null) { noprox = process.env.NO_PROXY.split(","); }
+       
         // Create the URL to pass in to the MQTT.js library
         if (this.brokerurl === "") {
             // if the broken may be ws:// or wss:// or even tcp://
             if (this.broker.indexOf("://") > -1) {
                 this.brokerurl = this.broker;
+                // Only for ws or wss, check if proxy env var for additional configuration
+                if (this.brokerurl.indexOf("wss://") > -1 || this.brokerurl.indexOf("ws://") > -1 ) {
+                    // check if proxy is set in env
+                    var noproxy;
+                    if (noprox) {
+                        for (var i in noprox) {
+                            if (this.brokerurl.indexOf(noprox[i].trim()) !== -1) { noproxy=true; }
+                        }
+                    }
+                    if (prox && !noproxy) {
+                        var parsedUrl = url.parse(this.brokerurl);
+                        var proxyOpts = url.parse(prox);
+                        // true for wss
+                        proxyOpts.secureEndpoint = parsedUrl.protocol ? parsedUrl.protocol === 'wss:' : true;
+                        // Set Agent for wsOption in MQTT
+                        var agent = new HttpsProxyAgent(proxyOpts);
+                        this.options.wsOptions = {
+                            agent: agent
+                        }
+                    }                
+                }
             } else {
                 // construct the std mqtt:// url
                 if (this.usetls) {

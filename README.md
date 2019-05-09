@@ -48,6 +48,9 @@ This has the same basic behavious as the original mqtt-broker node, just with op
 
 
 ## Change Log
+### 0.0.5
+* add use of process.env.http_proxy as per latest NR repo mods.
+* add use of process.env.no_proxy - NR does not have this yet.
 ### 0.0.4
 * fixes a crash when a subscribe fails due to invalid topic name/structure
 ### 0.0.3
